@@ -75,3 +75,46 @@ cp -r your-spa-build/* www/
 # Build with bundling
 cargo build --release --features bundle
 ```
+
+## Docker Support
+
+You can use Docker to build and run the Simple SPA Server. A multi-stage Dockerfile is provided that handles both the build process and creates a minimal runtime image.
+
+### Building the Docker Image
+
+If you want to bundle your assets into the binary, make sure to place them in the `www/` directory before building the Docker image.
+
+```bash
+# Build with default options (bundling and compression enabled)
+docker build -t simple-spa-server .
+
+# Build with custom features
+docker build --build-arg FEATURES="bundle" -t simple-spa-server .
+docker build --build-arg FEATURES="" -t simple-spa-server .
+
+# Build in debug mode
+docker build --build-arg BUILD_MODE=debug -t simple-spa-server .
+```
+
+### Running the Docker Container
+
+```bash
+# Run with default settings (port 8080)
+docker run -p 8080:8080 simple-spa-server
+
+# Run with custom arguments
+docker run -p 3000:3000 simple-spa-server --listen :3000 --serve-dir /app/www
+```
+
+### Using Volumes
+
+You can mount a local directory containing your SPA files:
+
+```bash
+# Mount local directory to the container
+docker run -p 8080:8080 -v $(pwd)/my-spa:/app/www simple-spa-server
+```
+
+### Example Dockerfile
+
+[Dockerfile](./Dockerfile)

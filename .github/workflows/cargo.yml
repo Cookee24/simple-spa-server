@@ -1,0 +1,114 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: simple-spa-server
+            asset_name: simple-spa-server-linux-glibc-amd64
+            target: x86_64-unknown-linux-gnu
+            use_musl: false
+          - os: ubuntu-latest
+            artifact_name: simple-spa-server
+            asset_name: simple-spa-server-linux-musl-amd64
+            target: x86_64-unknown-linux-musl
+            use_musl: true
+          - os: windows-latest
+            artifact_name: simple-spa-server.exe
+            asset_name: simple-spa-server-windows-amd64
+            target: x86_64-pc-windows-msvc
+            use_musl: false
+          - os: macos-latest
+            artifact_name: simple-spa-server
+            asset_name: simple-spa-server-macos-amd64
+            target: x86_64-apple-darwin
+            use_musl: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Rust
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Add target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install musl tools (Linux musl only)
+        if: matrix.use_musl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+  create_release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -R artifacts
+
+      - name: Compress artifacts
+        run: |
+          mkdir -p compressed
+
+          for dir in artifacts/*; do
+            if [ -d "$dir" ]; then
+              artifact_name=$(basename "$dir")
+              
+              # Find the binary file in the directory
+              binary_file=$(find "$dir" -type f | head -n 1)
+              binary_name=$(basename "$binary_file")
+              
+              if [[ "$binary_name" == *.exe ]]; then
+                # Windows executable - use ZIP format
+                echo "Compressing Windows binary: $artifact_name"
+                zip -j "compressed/${artifact_name}.zip" "$binary_file"
+              else
+                # Linux/macOS binary - use tar.gz format
+                echo "Compressing Unix binary: $artifact_name"
+                tar -czf "compressed/${artifact_name}.tar.gz" -C "$dir" "$binary_name"
+              fi
+            fi
+          done
+
+          # List compressed files
+          echo "Compressed artifacts:"
+          ls -la compressed/
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: compressed/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

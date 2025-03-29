@@ -1,0 +1,20 @@
+[package]
+name = "simple-spa-server"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = []
+bundle = ["rust-embed"]
+compression = ["rust-embed/compression"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["http2"] }
+tower-http = { version = "0.6", features = ["fs"] }
+tower = { version = "0.5" }
+clap = { version = "4", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"
+rust-embed = { version = "8", optional = true }
+mime_guess = "2"

@@ -179,7 +179,7 @@ async fn embedded_handler_without_fallback(path: Option<Path<String>>) -> impl I
 fn parse_listen_addr(addr: &str) -> Result<SocketAddr, Box<dyn std::error::Error>> {
     if addr.starts_with(':') {
         let port = addr[1..].parse::<u16>()?;
-        Ok(([0, 0, 0, 0], port).into())
+        Ok(([0, 0, 0, 0, 0, 0, 0, 0], port).into())
     } else {
         Ok(addr.parse()?)
     }

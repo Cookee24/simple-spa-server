@@ -11,7 +11,7 @@ pub struct Args {
     pub serve_dir: String,
 
     /// If return index.html if not matched.
-    #[arg(long, default_value_t = true)]
+    #[arg(long, default_value_t = true, action = clap::ArgAction::Set)]
     pub index: bool,
 
     /// The maximum number of blocking threads for the Tokio runtime.

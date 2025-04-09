@@ -60,7 +60,7 @@ simple-spa-server
 simple-spa-server --serve-dir ./dist --listen :3000
 
 # Disable SPA mode (don't fall back to index.html)
-simple-spa-server --no-index
+simple-spa-server --index false
 ```
 
 ## Bundling Assets

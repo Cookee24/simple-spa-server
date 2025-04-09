@@ -15,6 +15,6 @@ pub struct Args {
     pub index: bool,
 
     /// The maximum number of blocking threads for the Tokio runtime.
-    #[arg(long, default_value_t = 8)]
+    #[arg(long, default_value_t = 512)]
     pub blocking_threads: usize,
 }

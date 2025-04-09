@@ -16,8 +16,7 @@ tower = { version = "0.5" }
 clap = { version = "4", features = ["derive"] }
 log = "0.4"
 env_logger = "0.11"
-rust-embed = { version = "8", optional = true }
-mime_guess = "2"
+rust-embed = { version = "8", optional = true, features = ["mime-guess"] }
 
 [profile.release]
 strip = true

@@ -1,27 +1,23 @@
-#[cfg(feature = "bundle")]
+use std::borrow::Cow;
+
 use rust_embed::RustEmbed;
 
-#[cfg(feature = "bundle")]
-use mime_guess;
-
-#[cfg(feature = "bundle")]
 #[derive(RustEmbed)]
 #[folder = "www/"]
 pub struct StaticFiles;
 
-#[cfg(feature = "bundle")]
-pub fn get_embedded_file(path: &str) -> Option<Vec<u8>> {
-    let path = if path == "/" || path.is_empty() {
-        "index.html"
-    } else {
-        path.trim_start_matches('/')
-    };
-
-    StaticFiles::get(path).map(|f| f.data.into())
+pub fn get_file(path: &str) -> Option<(Cow<'static, [u8]>, String)> {
+    let path = path.trim_start_matches('/');
+    StaticFiles::get(path).map(|file| (file.data, file.metadata.mimetype().into()))
 }
 
-#[cfg(feature = "bundle")]
-pub fn get_embedded_file_type(path: &str) -> String {
-    let guess = mime_guess::from_path(path).first_or_text_plain();
-    guess.to_string()
+pub fn get_index_html(path: &str) -> Option<(Cow<'static, [u8]>, String)> {
+    let path = path.trim_start_matches('/');
+    let index_path = if path.is_empty() {
+        "index.html"
+    } else {
+        &format!("{}/index.html", path)
+    };
+
+    StaticFiles::get(index_path).map(|file| (file.data, file.metadata.mimetype().into()))
 }

@@ -106,13 +106,15 @@ pub async fn start_server(args: &crate::args::Args) -> Result<(), Box<dyn std::e
 fn build_app(args: &crate::args::Args) -> Router {
     #[cfg(feature = "bundle")]
     {
-        let app = Router::new().route("/", get(embedded_index));
+        let app = Router::new();
 
         // Choose the appropriate handler based on args.index
         let app = if args.index {
-            app.route("/*path", get(embedded_handler_with_index_fallback))
+            app.route("/", get(embedded_handler_with_index_fallback))
+                .route("/{*path}", get(embedded_handler_with_index_fallback))
         } else {
-            app.route("/*path", get(embedded_handler_without_fallback))
+            app.route("/", get(embedded_handler_without_fallback))
+                .route("/{*path}", get(embedded_handler_without_fallback))
         };
 
         app.layer(RequestLoggerLayer)
@@ -137,54 +139,41 @@ fn build_app(args: &crate::args::Args) -> Router {
 }
 
 #[cfg(feature = "bundle")]
-async fn embedded_index() -> impl IntoResponse {
-    match embedded::get_embedded_file("index.html") {
-        Some(data) => ([(header::CONTENT_TYPE, "text/html")], data).into_response(),
-        None => (
-            StatusCode::NOT_FOUND,
-            [(header::CONTENT_TYPE, "text/plain")],
-            "Not Found",
-        )
-            .into_response(),
+async fn embedded_handler_with_index_fallback(path: Option<Path<String>>) -> impl IntoResponse {
+    let path = path.map(|p| p.0).unwrap_or_else(|| "".to_string());
+
+    if let Some((data, mime)) = embedded::get_file(&path) {
+        return ([(header::CONTENT_TYPE, mime)], data).into_response();
     }
+
+    if let Some((data, mime)) = embedded::get_index_html(&path) {
+        return ([(header::CONTENT_TYPE, mime)], data).into_response();
+    }
+
+    if let Some((data, mime)) = embedded::get_index_html("") {
+        return ([(header::CONTENT_TYPE, mime)], data).into_response();
+    }
+
+    if let Some((data, mime)) = embedded::get_file("404.html") {
+        return ([(header::CONTENT_TYPE, mime)], data).into_response();
+    }
+
+    (StatusCode::NOT_FOUND, "Not Found").into_response()
 }
 
 #[cfg(feature = "bundle")]
-async fn embedded_handler_with_index_fallback(Path(path): Path<String>) -> impl IntoResponse {
-    match embedded::get_embedded_file(&path) {
-        Some(data) => {
-            let mime_type = embedded::get_embedded_file_type(&path);
-            ([(header::CONTENT_TYPE, mime_type)], data).into_response()
-        }
-        None => {
-            // Try to serve index.html if requested file not found (SPA typical behavior)
-            match embedded::get_embedded_file("index.html") {
-                Some(data) => ([(header::CONTENT_TYPE, "text/html")], data).into_response(),
-                None => (
-                    StatusCode::NOT_FOUND,
-                    [(header::CONTENT_TYPE, "text/plain")],
-                    "Not Found",
-                )
-                    .into_response(),
-            }
-        }
-    }
-}
+async fn embedded_handler_without_fallback(path: Option<Path<String>>) -> impl IntoResponse {
+    let path = path.map(|p| p.0).unwrap_or_else(|| "".into());
 
-#[cfg(feature = "bundle")]
-async fn embedded_handler_without_fallback(Path(path): Path<String>) -> impl IntoResponse {
-    match embedded::get_embedded_file(&path) {
-        Some(data) => {
-            let mime_type = embedded::get_embedded_file_type(&path);
-            ([(header::CONTENT_TYPE, mime_type)], data).into_response()
-        }
-        None => (
-            StatusCode::NOT_FOUND,
-            [(header::CONTENT_TYPE, "text/plain")],
-            "Not Found",
-        )
-            .into_response(),
+    if let Some((data, mime)) = embedded::get_file(&path) {
+        return ([(header::CONTENT_TYPE, mime)], data).into_response();
     }
+
+    if let Some((data, mime)) = embedded::get_index_html(&path) {
+        return ([(header::CONTENT_TYPE, mime)], data).into_response();
+    }
+
+    (StatusCode::NOT_FOUND, "Not Found").into_response()
 }
 
 fn parse_listen_addr(addr: &str) -> Result<SocketAddr, Box<dyn std::error::Error>> {

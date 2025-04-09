@@ -826,6 +826,7 @@ version = "8.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a2fcdc9f40c8dc2922842ca9add611ad19f332227fc651d015881ad1552bd9a"
 dependencies = [
+ "mime_guess",
  "sha2",
  "walkdir",
 ]
@@ -930,7 +931,6 @@ dependencies = [
  "clap",
  "env_logger",
  "log",
- "mime_guess",
  "rust-embed",
  "tokio",
  "tower",
